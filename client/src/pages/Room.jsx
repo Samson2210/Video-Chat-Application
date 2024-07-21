@@ -45,7 +45,7 @@ const RoomPage = () => {
       const newAudioState = !prevMedia.audio;
       if (myStream) {
         const audioTrack = myStream.getTracks().find(track => track.kind === 'audio');
-        // if (audioTrack)
+        if (audioTrack)
           audioTrack.enabled = newAudioState;
       }
       return { ...prevMedia, audio: newAudioState };
@@ -60,20 +60,22 @@ const RoomPage = () => {
     console.log(myStream);
   })
 
-  useEffect(()=>{
-    if(myStream){
-      sendStreams();
-    }
+  // useEffect(()=>{
+  //   if(myStream){
+  //     sendStreams();
+  //   }
 
-  },[myStream]);
+  // },[myStream]);
 
   const handleCallUser = useCallback(async () => {
+    handleMedia();
     const offer = await peer.getOffer();
     socket.emit("user:call", { to: remoteSocketId, offer });
   }, [remoteSocketId, socket]);
 
   const handleIncommingCall = useCallback(
     async ({ from, offer }) => {
+      handleMedia();
       setRemoteSocketId(from);
       console.log(`Incoming Call`, from, offer);
       const ans = await peer.getAnswer(offer);
@@ -92,8 +94,7 @@ const RoomPage = () => {
     ({ from, ans }) => {
       peer.setLocalDescription(ans);
       console.log("Call Accepted!");
-    },
-    []
+    },[]
   );
 
   const handleNegoNeeded = useCallback(async () => {
@@ -104,7 +105,7 @@ const RoomPage = () => {
 
 
   useEffect(() => {
-    handleMedia();
+    // handleMedia();
     peer.peer.addEventListener("negotiationneeded", handleNegoNeeded);
     return () => {
       peer.peer.removeEventListener("negotiationneeded", handleNegoNeeded);
@@ -131,29 +132,29 @@ const RoomPage = () => {
       console.log(remoteStream)
     });
 
-    return () => {
-      peer.peer.removeEventListener("track",  (ev) => {
-        const remoteStream = ev.streams;
-        console.log("GOT TRACKS!!");
-        setRemoteStream(remoteStream[0]);
-        console.log('setting stream')
-      });
-    }
+    // return () => {
+    //   peer.peer.removeEventListener("track",  (ev) => {
+    //     const remoteStream = ev.streams;
+    //     console.log("GOT TRACKS!!");
+    //     setRemoteStream(remoteStream[0]);
+    //     console.log('setting stream')
+    //   });
+    // }
   }, []);
 
   useEffect(() => {
     socket.on("user:joined", handleUserJoined);
     socket.on("incomming:call", handleIncommingCall);
     socket.on("call:accepted", handleCallAccepted);
-    // socket.on("peer:nego:needed", handleNegoNeedIncomming);
-    // socket.on("peer:nego:final", handleNegoNeedFinal);
+    socket.on("peer:nego:needed", handleNegoNeedIncomming);
+    socket.on("peer:nego:final", handleNegoNeedFinal);
 
     return () => {
       socket.off("user:joined", handleUserJoined);
       socket.off("incomming:call", handleIncommingCall);
       socket.off("call:accepted", handleCallAccepted);
-      // socket.off("peer:nego:needed", handleNegoNeedIncomming);
-      // socket.off("peer:nego:final", handleNegoNeedFinal);
+      socket.off("peer:nego:needed", handleNegoNeedIncomming);
+      socket.off("peer:nego:final", handleNegoNeedFinal);
     };
   }, [
     socket,
@@ -205,7 +206,7 @@ const RoomPage = () => {
       }
       </div>
       <div id="controls" className="absolute w-full bottom-0 bg-white/10 p-5 ">
-        {/* {myStream && <button onClick={sendStreams}>Send Stream</button>} */}
+        {myStream && <button onClick={sendStreams}>Send Stream</button>}
 
         <ul className="relative flex justify-around md:justify-center md:space-x-32 items-center px-20 ">
           <li onClick={handleCamera} >{!media.video? <BsCameraVideoFill size={isTabletOrMobile ? 20 : 30} />:<BsCameraVideoOffFill size={isTabletOrMobile ? 20 : 30} />}</li>
