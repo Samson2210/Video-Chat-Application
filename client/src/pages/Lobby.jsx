@@ -1,4 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { ToastContainer, toast, Bounce } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { useSocket } from '../context/SocketProvider';
 import { useNavigate } from 'react-router-dom';
 import Hero from '../Components/Hero'
@@ -8,7 +10,7 @@ const Lobby = () => {
   const [userName, setUserName] = useState('');
   const [room, setRoom] = useState('');
   const socket = useSocket();
-  
+
   const navigate = useNavigate();
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
@@ -23,11 +25,24 @@ const Lobby = () => {
 
   const copyRoomID = useCallback(() => {
     navigator.clipboard.writeText(room);
+    toast.success('Room Id copied!', {
+      toastId: "custom-id-yes",
+      position: "top-center",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+      transition: Bounce,
+      });
   }, [room]);
 
- 
+
   return (
     <div className='min-h-screen flex-row md:flex'>
+      <ToastContainer />
       <Hero />
       <form onSubmit={handleSubmit} className='md:w-max m-auto text-2xl text-white'>
         <label htmlFor='userName' className='text-center block md:inline-block'>Enter Username</label>
@@ -57,6 +72,7 @@ const Lobby = () => {
         </div>
         <button type='submit' className='text-white my-5 mx-auto p-2 rounded-md border-2 border-white block md:inline-block'>Join</button>
       </form>
+      
     </div>
   );
 };
