@@ -11,7 +11,7 @@ export const useSocket = ()=>{
 
 export const SocketProvider = (props)=>{
 
-    const socket  = useMemo(()=>io('localhost:8000',{autoConnect: false}),[]);
+    const socket  = useMemo(()=>io(`${import.meta.env.VITE_URL||'localhost:8000'}`,{autoConnect: false}),[]);
     return(
     <SocketContext.Provider value={socket}>
         {props.children}
