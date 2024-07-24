@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState , useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import ReactPlayer from "react-player";
 import peer from "../service/peer";
 import { useSocket } from "../context/SocketProvider";
@@ -6,6 +7,7 @@ import { useMediaQuery } from 'react-responsive';
 import { BsCameraVideoFill, BsCameraVideoOffFill } from "react-icons/bs";
 import { IoMdMic, IoMdMicOff } from "react-icons/io";
 import { MdCall } from "react-icons/md";
+import { MdCallEnd } from "react-icons/md";
 import PuffLoader from "react-spinners/PuffLoader";
 import { ToastContainer, toast , Bounce} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -19,40 +21,20 @@ const override = {
 
 const RoomPage = () => {
   const socket = useSocket();
-
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-
+  const [inCall, setInCall] = useState(false);
   const [remoteSocketId, setRemoteSocketId] = useState(null);
   const [myStream, setMyStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [media, setMedia] = useState({
-    audio: false,
+    audio: true,
     video: true,
   });
 
-  const toastId = useRef(null);
-  
-
   const isTabletOrMobile = useMediaQuery({ query: '(max-width: 1224px)' });
 
-  const handleUserJoined = useCallback(({ userName, id }) => {
-    setLoading(!loading);
-    toast.success(` ${userName} joined room`, {
-      toastId: "custom-id-yes",
-      position: "top-center",
-      autoClose: 2000,
-      hideProgressBar: true,
-      closeOnClick: true,
-      pauseOnHover: false,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-      transition: Bounce,
-    });
-    console.log(` ${userName} joined room`);
-    setRemoteSocketId(id);
-  }, [loading]);
-
+  ///////////////////////////////Functions to handle media devices////////////////////////////////
   const handleCamera = useCallback(() => {
     setMedia((prevMedia) => {
       const newVideoState = !prevMedia.video;
@@ -78,6 +60,7 @@ const RoomPage = () => {
       return { ...prevMedia, audio: newAudioState };
     });
   }, [myStream]);
+ 
 
   const handleMedia = useCallback(async () => {
     const stream = await navigator.mediaDevices.getUserMedia(media);
@@ -93,15 +76,38 @@ const RoomPage = () => {
     }
   }, []);
 
+  ///////////////////////Functios to handle user connections ////////////////////////
+  const handleUserJoined = useCallback(({ userName, id }) => {
+    setLoading(!loading);
+    toast.success(` ${userName} joined room`, {
+      toastId: "custom-id-yes",
+      position: "top-center",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+      transition: Bounce,
+    });
+    console.log(` ${userName} joined room`);
+    setRemoteSocketId(id);
+  }, [loading]);
+
   const handleCallUser = useCallback(async () => {
+    setInCall(true);
     const stream = await handleMedia();
     sendStreams(stream);
     const offer = await peer.getOffer();
     socket.emit("user:call", { to: remoteSocketId, offer });
   }, [handleMedia, remoteSocketId, sendStreams, socket]);
 
+
+
   const handleIncommingCall = useCallback(
     async ({ from, offer }) => {
+      setInCall(true)
       setLoading(!loading);
       const stream = await handleMedia();
       setRemoteSocketId(from);
@@ -119,6 +125,8 @@ const RoomPage = () => {
       console.log("Call Accepted!");
     }, []
   );
+
+  //////////////////////////// Renegotiating for send stream data ////////////////////////
 
   const handleNegoNeeded = useCallback(async () => {
     const offer = await peer.getOffer();
@@ -144,12 +152,66 @@ const RoomPage = () => {
     await peer.setLocalDescription(ans);
   }, []);
 
+  //////////////////////////// Fucntions to disconnect connections ////////////////////
+
+  const cleanupStreams = useCallback(() => {
+    if (myStream) {
+      myStream.getTracks().forEach(track => track.stop());
+      setMyStream(null);
+    }
+    
+    setRemoteStream(null);
+
+  }, [myStream, remoteStream]);
+
+  const handleEndCall = useCallback(() => {
+    setInCall(false);
+    cleanupStreams()
+    peer.peer.close();
+    setRemoteSocketId(null);
+    toast.info("Call Ended", {
+      toastId: "callend",
+      position: "top-center",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+      transition: Bounce,
+    });
+    socket.emit("user:endcall",{to:remoteSocketId});
+    setLoading(true);
+    navigate('/');
+  }, [myStream, remoteStream, socket, remoteSocketId, cleanupStreams]);
+
+  const handCallEnded = useCallback(()=>{
+    setInCall(false);
+    cleanupStreams();
+    console.log('call ended')
+    peer.peer.close();
+    setRemoteSocketId(null);
+    toast.info("Call Ended", {
+      toastId: "callend",
+      position: "top-center",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: false,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+      transition: Bounce,
+    });
+
+    setLoading(true);
+  },[myStream, remoteStream, cleanupStreams]);
+
   useEffect(() => {
     peer.peer.addEventListener("track", (ev) => {
       const [remoteStream] = ev.streams;
-      console.log("GOT TRACKS!!");
       setRemoteStream(remoteStream);
-      console.log(remoteStream);
     });
   }, []);
 
@@ -159,6 +221,8 @@ const RoomPage = () => {
     socket.on("call:accepted", handleCallAccepted);
     socket.on("peer:nego:needed", handleNegoNeedIncomming);
     socket.on("peer:nego:final", handleNegoNeedFinal);
+    socket.on('disconnet', handleEndCall);
+    socket.on("user:endcall", handCallEnded)
 
     return () => {
       socket.off("user:joined", handleUserJoined);
@@ -166,6 +230,8 @@ const RoomPage = () => {
       socket.off("call:accepted", handleCallAccepted);
       socket.off("peer:nego:needed", handleNegoNeedIncomming);
       socket.off("peer:nego:final", handleNegoNeedFinal);
+      socket.off('disconnet', handleEndCall);
+      socket.off("user:endcall", handCallEnded)
     };
   }, [
     socket,
@@ -190,6 +256,8 @@ const RoomPage = () => {
         aria-label="Loading Spinner"
         data-testid="loader"
       />
+
+      {/* Remote Stream Video Player  */}
       <div className="">
         {remoteStream && (
           <div className="my-auto md:pb-14">
@@ -207,6 +275,7 @@ const RoomPage = () => {
           </div>
         )}
 
+        {/* Local Stream Video Player  */}
         {myStream && (
           <div className="absolute bottom-28  md:right-11  ">
             <ReactPlayer
@@ -225,6 +294,8 @@ const RoomPage = () => {
           </div>
         )}
       </div>
+
+      {/* Media Control container  */}
       <div id="controls" className="absolute w-full bottom-0 bg-white/10 p-5 ">
         {/* {myStream && <button onClick={() => sendStreams(myStream)}>Send Stream</button>} */}
 
@@ -238,9 +309,12 @@ const RoomPage = () => {
               )}
             </li>
             <li>
-              <button onClick={handleCallUser}>
+              {!inCall && <button onClick={handleCallUser}>
                 <MdCall size={isTabletOrMobile ? 20 : 30} />
-              </button>
+              </button>}
+              {inCall && <button onClick={handleEndCall}>
+                <MdCallEnd color="red" size={isTabletOrMobile ? 20 : 30} />
+              </button>}
             </li>
             <li onClick={handleMike}>
               {!media.audio ? (
