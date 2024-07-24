@@ -36,8 +36,8 @@ A web-based video chat application that allows users to connect and communicate 
 ## Usage
 
 1. Open the application in your browser.
-2. Allow the application to access your camera and microphone.
-3. Enter a room name and join the room.
+2. Enter a room name and join the room.
+3. Allow the application to access your camera and microphone.
 4. Share the room name with another user to start a video call.
 
 ## Key Technologies
