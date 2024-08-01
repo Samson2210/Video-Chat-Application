@@ -183,7 +183,7 @@ const RoomPage = () => {
     });
     socket.emit("user:endcall",{to:remoteSocketId});
     setLoading(true);
-    navigate('/');
+    window.location.reload();
   }, [myStream, remoteStream, socket, remoteSocketId, cleanupStreams]);
 
   const handCallEnded = useCallback(()=>{
@@ -206,6 +206,7 @@ const RoomPage = () => {
     });
 
     setLoading(true);
+    window.location.reload();
   },[myStream, remoteStream, cleanupStreams]);
 
   useEffect(() => {
@@ -280,7 +281,6 @@ const RoomPage = () => {
           <div className="absolute bottom-28  md:right-11  ">
             <ReactPlayer
               playing
-              muted
               height={isTabletOrMobile ? "50%" : "20%"}
               width={isTabletOrMobile ? "50%" : "35%"}
               url={myStream}
@@ -295,12 +295,13 @@ const RoomPage = () => {
         )}
       </div>
 
+
       {/* Media Control container  */}
-      <div id="controls" className="absolute w-full bottom-0 bg-white/10 p-5 ">
+      <div id="controls" className="absolute w-full bottom-0 bg-white/10 p-5 h-[10vh]">
         {/* {myStream && <button onClick={() => sendStreams(myStream)}>Send Stream</button>} */}
 
         {remoteSocketId && (
-          <ul className="relative flex justify-around md:justify-center md:space-x-32 items-center px-20 ">
+          <ul className="relative flex justify-around md:justify-center md:space-x-32 items-center px-20">
             <li onClick={handleCamera}>
               {!media.video ? (
                 <BsCameraVideoFill size={isTabletOrMobile ? 20 : 30} />
