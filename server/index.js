@@ -11,6 +11,16 @@ const io = new Server(8000, {
     console.log(`Socket Connected`, socket.id);
     socket.on("room:join", (data) => {
       const { userName, room } = data;
+
+      //check if the room is full(only 2 users should be present in a room)
+      const roomSize = io.sockets.adapter.rooms.get(room)?.size || 0;
+
+      //if room is full
+      if(roomSize >= 2){
+        io.to(socket.id).emit('room:full');
+        return ;
+      }
+
       // console.log(userName," ", room , socket.id);
       usernameToSocketIdMap.set(userName, socket.id);
       socketidToUsernameMap.set(socket.id, userName);
@@ -42,10 +52,12 @@ const io = new Server(8000, {
     })
 
     socket.on('disconnect', () => {
-      // console.log('Socket Disconnected:', socket.id);
+      console.log('Socket Disconnected:', socket.id);
       const username = socketidToUsernameMap.get(socket.id);
       usernameToSocketIdMap.delete(username);
       socketidToUsernameMap.delete(socket.id);
+      // console.log(usernameToSocketIdMap)
+      // console.log(socketidToUsernameMap)
     });
 
     socket
