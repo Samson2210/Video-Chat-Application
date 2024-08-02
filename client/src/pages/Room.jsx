@@ -80,7 +80,7 @@ const RoomPage = () => {
   const handleUserJoined = useCallback(({ userName, id }) => {
     setLoading(!loading);
     toast.success(` ${userName} joined room`, {
-      toastId: "custom-id-yes",
+      toastId: "user joined",
       position: "top-center",
       autoClose: 2000,
       hideProgressBar: true,
@@ -126,7 +126,28 @@ const RoomPage = () => {
     }, []
   );
 
-  //////////////////////////// Renegotiating for send stream data ////////////////////////
+  const handleRoomFull = useCallback(
+    ()=>{
+      toast.warning(`Room is full`, {
+        position: "top-center",
+        toastId: "room full",
+        autoClose: 2000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Bounce,
+      });
+
+      setTimeout(()=>{
+        navigate('/')
+      },2000)
+    },[]
+  )
+
+  //////////////////////////// Renegotiating to send stream data ////////////////////////
 
   const handleNegoNeeded = useCallback(async () => {
     const offer = await peer.getOffer();
@@ -224,6 +245,7 @@ const RoomPage = () => {
     socket.on("peer:nego:final", handleNegoNeedFinal);
     socket.on('disconnet', handleEndCall);
     socket.on("user:endcall", handCallEnded)
+    socket.on("room:full", handleRoomFull);
 
     return () => {
       socket.off("user:joined", handleUserJoined);
@@ -233,6 +255,7 @@ const RoomPage = () => {
       socket.off("peer:nego:final", handleNegoNeedFinal);
       socket.off('disconnet', handleEndCall);
       socket.off("user:endcall", handCallEnded)
+      socket.off("room:full", handleRoomFull);
     };
   }, [
     socket,
@@ -264,7 +287,6 @@ const RoomPage = () => {
           <div className="my-auto md:pb-14">
             <ReactPlayer
               playing
-              muted
               height={isTabletOrMobile ? "640px" : "100%"}
               width={isTabletOrMobile ? "360px" : "60%"}
               url={remoteStream}
@@ -281,6 +303,7 @@ const RoomPage = () => {
           <div className="absolute bottom-28  md:right-11  ">
             <ReactPlayer
               playing
+              muted
               height={isTabletOrMobile ? "50%" : "20%"}
               width={isTabletOrMobile ? "50%" : "35%"}
               url={myStream}
@@ -304,24 +327,24 @@ const RoomPage = () => {
           <ul className="relative flex justify-around md:justify-center md:space-x-32 items-center px-20">
             <li onClick={handleCamera}>
               {!media.video ? (
-                <BsCameraVideoFill size={isTabletOrMobile ? 20 : 30} />
+                <BsCameraVideoFill size={30} />
               ) : (
-                <BsCameraVideoOffFill size={isTabletOrMobile ? 20 : 30} />
+                <BsCameraVideoOffFill size={30} />
               )}
             </li>
             <li>
               {!inCall && <button onClick={handleCallUser}>
-                <MdCall size={isTabletOrMobile ? 20 : 30} />
+                <MdCall size={30} />
               </button>}
               {inCall && <button onClick={handleEndCall}>
-                <MdCallEnd color="red" size={isTabletOrMobile ? 20 : 30} />
+                <MdCallEnd color="red" size={30} />
               </button>}
             </li>
             <li onClick={handleMike}>
               {!media.audio ? (
-                <IoMdMic size={isTabletOrMobile ? 20 : 30} />
+                <IoMdMic size={30} />
               ) : (
-                <IoMdMicOff size={isTabletOrMobile ? 20 : 30} />
+                <IoMdMicOff size={30} />
               )}
             </li>
           </ul>
